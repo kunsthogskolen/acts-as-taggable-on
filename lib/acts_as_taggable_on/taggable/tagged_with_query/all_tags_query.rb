@@ -32,11 +32,18 @@ module ActsAsTaggableOn::Taggable::TaggedWithQuery
     end
 
     def on_conditions(tag, tagging_alias)
+      ids = if defined?(Globalize)
+              tag_model.translation_class.with_locale(Globalize.locale)
+                       .arel_table.project(tag_arel_table[:id])
+                       .where(tag_match_type(tag))
+            else
+              tag_arel_table.project(tag_arel_table[:id]).where(tag_match_type(tag))
+            end
       on_condition = tagging_alias[:taggable_id].eq(taggable_arel_table[taggable_model.primary_key])
         .and(tagging_alias[:taggable_type].eq(taggable_model.base_class.name))
         .and(
           tagging_alias[:tag_id].in(
-            tag_arel_table.project(tag_arel_table[:id]).where(tag_match_type(tag))
+            ids
           )
         )
 

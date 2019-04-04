@@ -18,11 +18,18 @@ module ActsAsTaggableOn::Taggable::TaggedWithQuery
     end
 
     def at_least_one_tag
+      selects = if defined?(Globalize)
+                  tag_translations_arel_table.project(
+                    tag_translations_arel_table[:tag_id]
+                  )
+                else
+                  tag_arel_table.project(tag_arel_table[:id])
+                end
       exists_contition = tagging_arel_table[:taggable_id].eq(taggable_arel_table[taggable_model.primary_key])
                           .and(tagging_arel_table[:taggable_type].eq(taggable_model.base_class.name))
                           .and(
                             tagging_arel_table[:tag_id].in(
-                              tag_arel_table.project(tag_arel_table[:id]).where(tags_match_type)
+                              selects.where(tags_match_type)
                             )
                           )
 

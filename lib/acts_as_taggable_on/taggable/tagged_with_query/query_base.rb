@@ -21,28 +21,49 @@ module ActsAsTaggableOn::Taggable::TaggedWithQuery
     end
 
     def tagging_arel_table
-      @tagging_arel_table ||=tagging_model.arel_table
+      @tagging_arel_table ||= tagging_model.arel_table
+    end
+
+    def tag_translations_arel_table
+      @tag_translations_arel_table ||=
+        tag_model.translation_class.with_locale(Globalize.locale).arel_table
     end
 
     def tag_match_type(tag)
-      matches_attribute = tag_arel_table[:name]
-      matches_attribute = matches_attribute.lower unless ActsAsTaggableOn.strict_case_match
+      matches_attribute = if defined?(Globalize)
+                            tag_translations_arel_table[:name]
+                          else
+                            tag_arel_table[:name]
+                          end
+      matches_attribute = unless ActsAsTaggableOn.strict_case_match
+                            matches_attribute.lower
+                          end
 
       if options[:wild].present?
-        matches_attribute.matches("%#{escaped_tag(tag)}%", "!")
+        matches_attribute.matches("%#{escaped_tag(tag)}%", '!')
       else
-        matches_attribute.matches(escaped_tag(tag), "!")
+        matches_attribute.matches(escaped_tag(tag), '!')
       end
     end
 
     def tags_match_type
-      matches_attribute = tag_arel_table[:name]
-      matches_attribute = matches_attribute.lower unless ActsAsTaggableOn.strict_case_match
+      matches_attribute = if defined?(Globalize)
+                            tag_translations_arel_table[:name]
+                          else
+                            tag_arel_table[:name]
+                          end
+      matches_attribute = unless ActsAsTaggableOn.strict_case_match
+                            matches_attribute.lower
+                          end
 
       if options[:wild].present?
-        matches_attribute.matches_any(tag_list.map{|tag| "%#{escaped_tag(tag)}%"}, "!")
+        matches_attribute.matches_any(
+          tag_list.map { |tag| "%#{escaped_tag(tag)}%" }, '!'
+        )
       else
-        matches_attribute.matches_any(tag_list.map{|tag| "#{escaped_tag(tag)}"}, "!")
+        matches_attribute.matches_any(
+          tag_list.map { |tag| escaped_tag(tag).to_s }, '!'
+        )
       end
     end
 

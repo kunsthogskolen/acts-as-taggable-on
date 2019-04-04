@@ -28,24 +28,26 @@ module ActsAsTaggableOn::Taggable::TaggedWithQuery
           )
       end
 
-      return arel_join.join_sources
+      arel_join.join_sources
     end
 
     def on_conditions(tag, tagging_alias)
-      ids = if defined?(Globalize)
-              tag_model.translation_class.with_locale(Globalize.locale)
-                       .arel_table.project(tag_arel_table[:id])
-                       .where(tag_match_type(tag))
-            else
-              tag_arel_table.project(tag_arel_table[:id]).where(tag_match_type(tag))
-            end
-      on_condition = tagging_alias[:taggable_id].eq(taggable_arel_table[taggable_model.primary_key])
-        .and(tagging_alias[:taggable_type].eq(taggable_model.base_class.name))
-        .and(
-          tagging_alias[:tag_id].in(
-            ids
-          )
+      selects = if defined?(Globalize)
+                  tag_translations_arel_table.project(
+                    tag_translations_arel_table[:tag_id]
+                  )
+                else
+                  tag_arel_table.project(tag_arel_table[:id])
+                end
+      on_condition = tagging_alias[:taggable_id].eq(
+        taggable_arel_table[taggable_model.primary_key]
+      ).and(
+        tagging_alias[:taggable_type].eq(taggable_model.base_class.name)
+      ).and(
+        tagging_alias[:tag_id].in(
+          selects.where(tag_match_type(tag))
         )
+      )
 
       if options[:start_at].present?
         on_condition = on_condition.and(tagging_alias[:created_at].gteq(options[:start_at]))
